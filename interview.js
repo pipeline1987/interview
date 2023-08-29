@@ -31,6 +31,8 @@ const fakeRequests = [
 
 // --- No need to edit anything above this line ---
 
+const textKey = "textKey";
+const spechKey = "spechKey";
 
 (async () => {
   // TODO: Respond to the user with the translated texts in the same order including a link to a audio speech file for each.
@@ -44,6 +46,34 @@ const fakeRequests = [
       speech: [] // Add all the speech URLs to this array in the same order as the translations
     }
 
+    for (requestText of request) {
+      const cachedText = await cache.getItem(`${textKey}|${requestText}`);
+      
+      if (cachedText) {
+        response.translations.push(cachedText);
+      } else {
+        const translatedText = await translation.translate(requestText);
+
+        response.translations.push(translatedText);
+
+        await cache.setItem(`${textKey}|${requestText}`, translatedText);
+      }
+
+      const cachedSpechUrl = await cache.getItem(`${spechKey}|${requestText}`);
+
+      if (cachedSpechUrl) {
+        response.speech.push(cachedSpechUrl);
+      } else {
+        const speachTextStream = await speech.speak(requestText);
+
+        const speachTextUrl = await storage.pipe(speachTextStream);
+
+        response.speech.push(speachTextUrl);
+
+        await cache.setItem(`${spechKey}|${requestText}`, speachTextUrl);
+      }
+    }
+    
     // TODO: Fetch the translations for each from the Cache service to see if they are available.
 
     // TODO: If translations are not available, use the Translation service. If not in the cache, store the response to the cache.
